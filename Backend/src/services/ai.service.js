@@ -7,6 +7,29 @@ const ai = new GoogleGenAI({
     apiKey: process.env.GOOGLE_GENAI_API_KEY
 })
 
+// Gemini's responseSchema only accepts a restricted OpenAPI-style subset.
+// zod-to-json-schema adds keys like "$schema" and "additionalProperties"
+// that Gemini can reject or silently mishandle. This strips them out.
+function toGeminiSchema(zodSchema) {
+    const schema = zodToJsonSchema(zodSchema, { target: "openApi3" })
+    delete schema.$schema
+    return stripUnsupportedKeys(schema)
+}
+
+function stripUnsupportedKeys(obj) {
+    if (Array.isArray(obj)) {
+        return obj.map(stripUnsupportedKeys)
+    }
+    if (obj && typeof obj === "object") {
+        const cleaned = {}
+        for (const [ key, value ] of Object.entries(obj)) {
+            if (key === "$schema" || key === "additionalProperties") continue
+            cleaned[ key ] = stripUnsupportedKeys(value)
+        }
+        return cleaned
+    }
+    return obj
+}
 
 const interviewReportSchema = z.object({
     matchScore: z.number().describe("A score between 0 and 100 indicating how well the candidate's profile matches the job describe"),
@@ -34,28 +57,39 @@ const interviewReportSchema = z.object({
 
 async function generateInterviewReport({ resume, selfDescription, jobDescription }) {
 
-
     const prompt = `Generate an interview report for a candidate with the following details:
                         Resume: ${resume}
                         Self Description: ${selfDescription}
                         Job Description: ${jobDescription}
 `
 
-    const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: prompt,
-        config: {
-            responseMimeType: "application/json",
-            responseSchema: zodToJsonSchema(interviewReportSchema),
-        }
-    })
+    let response
+    try {
+        response = await ai.models.generateContent({
+            model: "gemini-2.0-flash",
+            contents: prompt,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: toGeminiSchema(interviewReportSchema),
+            }
+        })
+    } catch (err) {
+        console.error("Gemini generateInterviewReport error:", err?.message || err)
+        throw new Error("Failed to generate interview report from AI. " + (err?.message || ""))
+    }
 
-    return JSON.parse(response.text)
+    if (!response?.text) {
+        console.error("Gemini returned empty response:", JSON.stringify(response))
+        throw new Error("AI returned an empty response.")
+    }
 
-
+    try {
+        return JSON.parse(response.text)
+    } catch (err) {
+        console.error("Failed to parse AI response as JSON:", response.text)
+        throw new Error("AI response was not valid JSON.")
+    }
 }
-
-
 
 async function generatePdfFromHtml(htmlContent) {
     const browser = await puppeteer.launch()
@@ -95,15 +129,20 @@ async function generateResumePdf({ resume, selfDescription, jobDescription }) {
                         The resume should not be so lengthy, it should ideally be 1-2 pages long when converted to PDF. Focus on quality rather than quantity and make sure to include all the relevant information that can increase the candidate's chances of getting an interview call for the given job description.
                     `
 
-    const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: prompt,
-        config: {
-            responseMimeType: "application/json",
-            responseSchema: zodToJsonSchema(resumePdfSchema),
-        }
-    })
-
+    let response
+    try {
+        response = await ai.models.generateContent({
+            model: "gemini-2.0-flash",
+            contents: prompt,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: toGeminiSchema(resumePdfSchema),
+            }
+        })
+    } catch (err) {
+        console.error("Gemini generateResumePdf error:", err?.message || err)
+        throw new Error("Failed to generate resume from AI. " + (err?.message || ""))
+    }
 
     const jsonContent = JSON.parse(response.text)
 
