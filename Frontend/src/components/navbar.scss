@@ -1,0 +1,62 @@
+$bg-card: #161b22;
+$border-color: #2a3348;
+$text-primary: #e6edf3;
+$text-muted: #7d8590;
+$accent: #ff2d78;
+$font-stack: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+.app-navbar {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 2rem;
+    background-color: $bg-card;
+    border-bottom: 1px solid $border-color;
+    font-family: $font-stack;
+    box-sizing: border-box;
+
+    &__brand {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: $text-primary;
+        text-decoration: none;
+    }
+
+    &__logo {
+        color: $accent;
+    }
+
+    &__links {
+        display: flex;
+        gap: 1.5rem;
+        flex: 1;
+        justify-content: center;
+    }
+
+    &__link {
+        color: $text-muted;
+        text-decoration: none;
+        font-size: 0.875rem;
+        font-weight: 500;
+        transition: color 0.2s;
+
+        &:hover {
+            color: $text-primary;
+        }
+    }
+
+    &__right {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    &__user {
+        font-size: 0.8rem;
+        color: $text-muted;
+    }
+}

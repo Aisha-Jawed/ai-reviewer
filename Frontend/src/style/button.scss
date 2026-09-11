@@ -14,6 +14,17 @@
         color: white;
     }
 
+        &.ghost-button {
+        background-color: transparent;
+        color: #e6edf3;
+        border: 1px solid #2a3348;
+
+        &:hover {
+            border-color: #e1034d;
+            color: #e1034d;
+        }
+    }
+
     &:active{
         transform: scale(0.9);
     }

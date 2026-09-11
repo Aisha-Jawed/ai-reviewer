@@ -371,3 +371,44 @@ $font-stack:     system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Robot
         }
     }
 }
+
+.dropzone--filled {
+    border-style: solid;
+    border-color: #3fb950;
+    background-color: rgba(#3fb950, 0.05);
+
+    .dropzone__icon--success {
+        color: #3fb950;
+    }
+
+    .dropzone__title {
+        color: #3fb950;
+        word-break: break-all;
+    }
+}
+.report-item {
+    position: relative;
+
+    &__delete {
+        position: absolute;
+        top: 0.75rem;
+        right: 0.75rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 26px;
+        height: 26px;
+        background: none;
+        border: 1px solid $border-color;
+        border-radius: 0.4rem;
+        color: $text-muted;
+        cursor: pointer;
+        transition: color 0.15s, border-color 0.15s, background-color 0.15s;
+
+        &:hover {
+            color: #ff4d4d;
+            border-color: #ff4d4d;
+            background-color: rgba(#ff4d4d, 0.08);
+        }
+    }
+}
