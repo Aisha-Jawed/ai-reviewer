@@ -15,10 +15,25 @@ const Home = () => {
     const navigate = useNavigate()
 
     const handleGenerateReport = async () => {
-        const resumeFile = resumeInputRef.current.files[ 0 ]
-        const data = await generateReport({ jobDescription, selfDescription, resumeFile })
-        navigate(`/interview/${data._id}`)
+    const resumeFile = resumeInputRef.current.files[ 0 ]
+    if (!resumeFile && !selfDescription.trim()) {
+        alert("Please upload a resume or add a self-description.")
+        return
     }
+    if (!jobDescription.trim()) {
+        alert("Please paste a job description.")
+        return
+    }
+
+    const data = await generateReport({ jobDescription, selfDescription, resumeFile })
+
+    if (!data) {
+        alert("Something went wrong generating your report. Please try again.")
+        return
+    }
+
+    navigate(`/interview/${data._id}`)
+}
 
     const handleResumeChange = (e) => {
         const file = e.target.files[ 0 ]
