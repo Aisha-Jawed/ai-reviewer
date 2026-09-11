@@ -27,12 +27,13 @@ async function generateInterViewReportController(req, res) {
         })
 
         const interviewReport = await interviewReportModel.create({
-            user: req.user.id,
-            resume: resumeContent.text,
-            selfDescription,
-            jobDescription,
-            ...interViewReportByAi
-        })
+        user: req.user.id,
+        resume: resumeContent.text,
+        selfDescription,
+        jobDescription,
+        ...interViewReportByAi,
+        title: interViewReportByAi.title || jobDescription?.split("\n")[ 0 ]?.slice(0, 100) || "Interview Report"
+})
 
         res.status(201).json({
             message: "Interview report generated successfully.",
@@ -41,6 +42,30 @@ async function generateInterViewReportController(req, res) {
     } catch (error) {
         console.error("generateInterViewReportController error:", error)
         res.status(500).json({ message: error.message || "Failed to generate interview report." })
+    }
+}
+
+/**
+ * @description Controller to delete an interview report by interviewId.
+ */
+async function deleteInterviewReportController(req, res) {
+    try {
+        const { interviewId } = req.params
+
+        const interviewReport = await interviewReportModel.findOneAndDelete({ _id: interviewId, user: req.user.id })
+
+        if (!interviewReport) {
+            return res.status(404).json({
+                message: "Interview report not found."
+            })
+        }
+
+        res.status(200).json({
+            message: "Interview report deleted successfully."
+        })
+    } catch (error) {
+        console.error("deleteInterviewReportController error:", error)
+        res.status(500).json({ message: error.message || "Failed to delete interview report." })
     }
 }
 
@@ -119,4 +144,4 @@ async function generateResumePdfController(req, res) {
     }
 }
 
-module.exports = { generateInterViewReportController, getInterviewReportByIdController, getAllInterviewReportsController, generateResumePdfController }
+module.exports = { generateInterViewReportController, getInterviewReportByIdController, getAllInterviewReportsController, generateResumePdfController, deleteInterviewReportController }

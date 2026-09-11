@@ -11,7 +11,10 @@ const ai = new GoogleGenAI({
 // zod-to-json-schema adds keys like "$schema" and "additionalProperties"
 // that Gemini can reject or silently mishandle. This strips them out.
 function toGeminiSchema(zodSchema) {
-    const schema = zodToJsonSchema(zodSchema, { target: "openApi3" })
+    const schema = zodToJsonSchema(zodSchema, {
+        target: "openApi3",
+        $refStrategy: "none"   // inline all definitions, Gemini can't resolve $ref
+    })
     delete schema.$schema
     return stripUnsupportedKeys(schema)
 }
@@ -57,20 +60,45 @@ const interviewReportSchema = z.object({
 
 async function generateInterviewReport({ resume, selfDescription, jobDescription }) {
 
-    const prompt = `Generate an interview report for a candidate with the following details:
-                        Resume: ${resume}
-                        Self Description: ${selfDescription}
-                        Job Description: ${jobDescription}
-`
+    const prompt = `You are an expert technical interview coach. Based on the candidate details below, generate an interview preparation report.
+
+Candidate Resume:
+${resume}
+
+Candidate Self Description:
+${selfDescription}
+
+Target Job Description:
+${jobDescription}
+
+Respond with ONLY a valid JSON object (no markdown, no code fences, no extra text) matching EXACTLY this structure and these field names:
+
+{
+  "title": "string - the job title this report is for",
+  "matchScore": number between 0 and 100,
+  "technicalQuestions": [
+    { "question": "string", "intention": "string", "answer": "string" }
+  ],
+  "behavioralQuestions": [
+    { "question": "string", "intention": "string", "answer": "string" }
+  ],
+  "skillGaps": [
+    { "skill": "string", "severity": "low" | "medium" | "high" }
+  ],
+  "preparationPlan": [
+    { "day": number, "focus": "string", "tasks": ["string", "string"] }
+  ]
+}
+
+Generate at least 5 technicalQuestions, at least 4 behavioralQuestions, at least 3 skillGaps, and a preparationPlan covering at least 5 days. Use exactly these field names — do not rename, omit, or nest them differently.`
 
     let response
     try {
         response = await ai.models.generateContent({
-            model: "gemini-2.0-flash",
+            model: "gemini-3.6-flash",
             contents: prompt,
             config: {
                 responseMimeType: "application/json",
-                responseSchema: toGeminiSchema(interviewReportSchema),
             }
         })
     } catch (err) {
@@ -83,14 +111,24 @@ async function generateInterviewReport({ resume, selfDescription, jobDescription
         throw new Error("AI returned an empty response.")
     }
 
+    let parsed
     try {
-        return JSON.parse(response.text)
+        // Strip markdown code fences in case the model adds them anyway
+        const cleaned = response.text.trim().replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "")
+        parsed = JSON.parse(cleaned)
     } catch (err) {
         console.error("Failed to parse AI response as JSON:", response.text)
         throw new Error("AI response was not valid JSON.")
     }
-}
 
+    console.log("AI report keys:", Object.keys(parsed))
+
+    if (!parsed.title || typeof parsed.title !== "string" || !parsed.title.trim()) {
+        parsed.title = jobDescription?.split("\n")[ 0 ]?.slice(0, 100) || "Interview Report"
+    }
+
+    return parsed
+}
 async function generatePdfFromHtml(htmlContent) {
     const browser = await puppeteer.launch()
     const page = await browser.newPage();
@@ -132,7 +170,7 @@ async function generateResumePdf({ resume, selfDescription, jobDescription }) {
     let response
     try {
         response = await ai.models.generateContent({
-            model: "gemini-2.0-flash",
+            model: "gemini-3.6-flash",
             contents: prompt,
             config: {
                 responseMimeType: "application/json",
