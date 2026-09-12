@@ -42,15 +42,9 @@ async function registerUserController(req, res) {
         { expiresIn: "1d" }
     )
 
-res.cookie("token", token, {
-    httpOnly: true,
-    secure: true,
-    sameSite: "none"
-})
-
-
     res.status(201).json({
         message: "User registered successfully",
+        token,
         user: {
             id: user._id,
             username: user.username,
@@ -92,13 +86,9 @@ async function loginUserController(req, res) {
         { expiresIn: "1d" }
     )
 
-    res.cookie("token", token, {
-    httpOnly: true,
-    secure: true,
-    sameSite: "none"
-})
     res.status(200).json({
         message: "User loggedIn successfully.",
+        token,
         user: {
             id: user._id,
             username: user.username,
@@ -110,21 +100,16 @@ async function loginUserController(req, res) {
 
 /**
  * @name logoutUserController
- * @description clear token from user cookie and add the token in blacklist
+ * @description blacklist the current token so it can no longer be used
  * @access public
  */
 async function logoutUserController(req, res) {
-    const token = req.cookies.token
+    const authHeader = req.headers.authorization
+    const token = authHeader && authHeader.startsWith("Bearer ") ? authHeader.split(" ")[ 1 ] : null
 
     if (token) {
         await tokenBlacklistModel.create({ token })
     }
-
-    res.clearCookie("token", {
-    httpOnly: true,
-    secure: true,
-    sameSite: "none"
-})
 
     res.status(200).json({
         message: "User logged out successfully"
