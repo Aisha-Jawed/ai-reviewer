@@ -173,7 +173,7 @@ InterviewAI uses stateless JWT authentication with the token stored in the brows
 
 ## 📄 License
 
-This project was built as a personal/portfolio project.
+This was built as a personal project.
 
 ---
 
